@@ -30,13 +30,20 @@ function App() {
   }, []);
 
   // 2. Fonction bach n-siftou boita jdida
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('inboxes').insert([formData]);
+    console.log("Sending to Supabase:", formData); // Bach n-choufou achnou siftna
+
+    const { data, error } = await supabase
+      .from('inboxes')
+      .insert([formData]);
 
     if (error) {
-      alert("Error: " + error.message);
+      // Hna ghadi i-goul lik l-khata2 nichan (mital: Column not found)
+      alert("SUPABASE ERROR: " + error.message);
+      console.error("Full Error:", error);
     } else {
+      alert("✅ Saved Successfully!"); // Bach n-t-akdou bli t-zadit
       setIsModalOpen(false);
       setFormData({ provider: 'GMAIL', user_name: '', email: '', password: '' });
       fetchInboxes();
