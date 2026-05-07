@@ -50,6 +50,21 @@ const handleSubmit = async (e) => {
     }
   };
 
+  const [emails, setEmails] = useState({});
+const [loading, setLoading] = useState({});
+
+const loadRealEmails = async (id) => {
+  setLoading(prev => ({...prev, [id]: true}));
+  try {
+    const response = await fetch(`/api/fetch-emails?id=${id}`);
+    const data = await response.json();
+    setEmails(prev => ({...prev, [id]: data}));
+  } catch (err) {
+    console.error("Failed to load emails");
+  }
+  setLoading(prev => ({...prev, [id]: false}));
+};
+  
   // 3. Fonction dial l-msh (Delete)
   const deleteInbox = async (id) => {
     if (window.confirm("Are you sure you want to delete this inbox?")) {
