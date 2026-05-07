@@ -138,14 +138,28 @@ const loadRealEmails = async (id) => {
               </div>
 
               {/* Card Body (Simulated Emails) */}
-              <div className="p-4 space-y-1 relative h-48 overflow-hidden">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className="flex gap-2 items-center opacity-30">
-                    <div className="w-4 h-4 bg-gray-700 rounded-sm"></div>
-                    <div className="flex-1 h-3 bg-gray-700 rounded-full"></div>
-                    <div className="w-8 h-2 bg-gray-800 rounded-full"></div>
-                  </div>
-                ))}
+<div className="p-2 space-y-1 bg-[#0d1621] h-60 overflow-y-auto">
+  <button 
+    onClick={() => loadRealEmails(box.id)}
+    className="w-full text-[10px] bg-blue-600 hover:bg-blue-700 py-1 rounded mb-2 font-bold"
+  >
+    {loading[box.id] ? "Loading..." : "REFRESH EMAILS"}
+  </button>
+
+  {emails[box.id] && emails[box.id].length > 0 ? (
+    emails[box.id].map((mail, i) => (
+      <div key={i} className="p-2 border-b border-gray-800 text-[10px] hover:bg-[#1b3147]">
+        <div className="text-blue-400 font-bold">{mail.from}</div>
+        <div className="text-gray-200 truncate">{mail.subject}</div>
+        <div className="text-[8px] text-gray-600">{new Date(mail.date).toLocaleString()}</div>
+      </div>
+    ))
+  ) : (
+    <div className="text-[10px] text-gray-600 text-center py-10 italic">
+      Click refresh to fetch real emails
+    </div>
+  )}
+</div>
                 
                 {/* Information Overlay (Hover) */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
