@@ -65,7 +65,19 @@ function App() {
           <div className="bg-gray-700 p-2 rounded-full cursor-pointer"><User size={20} /></div>
         </div>
       </header>
-
+      
+      <div>
+        <label className="block text-xs font-bold mb-1 uppercase text-gray-400">App Password / Password</label>
+        <input 
+          type="password" required
+          placeholder="••••••••"
+          className="w-full p-2 bg-[#1a2c3d] rounded border border-gray-600 outline-none text-white focus:border-blue-500"
+          value={formData.password}
+          onChange={(e) => setFormData({...formData, password: e.target.value})}
+          />
+        
+  <p className="text-[10px] text-gray-500 mt-1">* For Gmail, use an "App Password".</p>
+</div>
       {/* Grid dial l-boitat */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {inboxes.map((box) => (
