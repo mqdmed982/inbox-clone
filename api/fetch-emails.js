@@ -20,15 +20,11 @@ export default async function handler(req, res) {
 
   try {
     await client.connect();
-    // كنحلوا الـ INBOX وكنعرفوا شحال من ميساج كاين
     let mailbox = await client.mailboxOpen('INBOX');
-    
-    // كنجبدو غير آخر 10 إيمايلات (مثلا من 90 لـ 100)
     let lastIndex = mailbox.exists;
     let firstIndex = Math.max(1, lastIndex - 9); 
     
     let messages = [];
-    // كنجبدو غير هاد الـ range باش يكون سريع بزاف
     for await (let message of client.fetch(`${firstIndex}:${lastIndex}`, { envelope: true })) {
       messages.push({
         from: message.envelope.from[0].name || message.envelope.from[0].address,
@@ -36,12 +32,9 @@ export default async function handler(req, res) {
         date: message.envelope.date
       });
     }
-
     await client.logout();
-    // ترتيب من الأحدث للأقدم
     return res.status(200).json(messages.reverse());
-    
   } catch (err) {
-    return res.status(500).json({ error: "Connection Error: " + err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
