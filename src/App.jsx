@@ -11,6 +11,7 @@ function App() {
     provider: 'Gmail',
     user_name: '',
     email: ''
+    password: '' // Zid hada
   });
 
   // 1. Njib l-data men Supabase
