@@ -39,3 +39,11 @@ const loadRealEmails = async (inboxId) => {
     </div>
   )}
 </div>
+
+
+<button 
+  onClick={() => loadRealEmails(box.id)}
+  className="w-full text-[10px] bg-blue-600 hover:bg-blue-700 py-1 rounded mb-2 font-bold"
+>
+  {loading[box.id] ? "Loading..." : "REFRESH EMAILS"}
+</button>
