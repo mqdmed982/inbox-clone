@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
-import { Mail, User, Plus, X, Trash2, RefreshCw, Search, Inbox, Globe, Hash, Copy, Check } from 'lucide-react';
+import { Mail, User, Plus, X, Trash2, RefreshCw, Search, Inbox, Globe, Hash, Copy, Check, ShieldCheck, Activity } from 'lucide-react';
 
 function App() {
   const [inboxes, setInboxes] = useState([]);
@@ -11,21 +11,18 @@ function App() {
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({ provider: 'GMAIL', user_name: '', email: '', password: '' });
 
-  // 1. جلب الحسابات
   const fetchInboxes = async () => {
     let { data } = await supabase.from('inboxes').select('*').order('created_at', { ascending: false });
     if (data) setInboxes(data);
   };
   useEffect(() => { fetchInboxes(); }, []);
 
-  // 2. جلب الإيمايلات
   const loadRealEmails = async (id) => {
     setLoading(prev => ({ ...prev, [id]: true }));
     try {
       const res = await fetch(`/api/fetch-emails?id=${id}`);
       const data = await res.json();
       if (!data.error) setEmails(prev => ({ ...prev, [id]: data }));
-      else alert("API Error: " + data.error);
     } catch (err) { console.log("Fetch error"); }
     setLoading(prev => ({ ...prev, [id]: false }));
   };
@@ -43,7 +40,6 @@ function App() {
     navigator.clipboard.writeText(text);
   };
 
-  // 3. حفظ الحساب الجديد (اللي كانت ناقصة)
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { error } = await supabase.from('inboxes').insert([formData]);
@@ -51,129 +47,156 @@ function App() {
       setIsModalOpen(false);
       setFormData({ provider: 'GMAIL', user_name: '', email: '', password: '' });
       fetchInboxes();
-    } else {
-      alert("Error: " + error.message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#1a2c3d] text-white font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-blue-500/30">
       
-      {/* HEADER */}
-      <header className="flex items-center justify-between bg-[#243b55] p-3 px-6 border-b border-gray-800 sticky top-0 z-50 shadow-2xl">
-        <div className="text-2xl font-bold italic text-blue-400 flex items-center gap-2 min-w-max">
-          <Mail size={22} fill="currentColor"/> Inboxious
+      {/* --- HEADER --- */}
+      <header className="flex items-center justify-between bg-[#1e293b]/80 backdrop-blur-md p-3 px-6 border-b border-slate-800 sticky top-0 z-50 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-900/40">
+            <Mail size={20} className="text-white" fill="currentColor"/>
+          </div>
+          <span className="text-xl font-black tracking-tighter text-white uppercase italic">Inboxious <span className="text-blue-500 text-xs not-italic font-bold ml-1">PRO</span></span>
         </div>
 
         <div className="flex-1 max-w-xl mx-8 relative">
           <input 
             type="text" 
-            placeholder="Search subject/sender..." 
-            className="w-full bg-[#1a2c3d] border border-gray-700 text-white py-2 px-10 rounded-md outline-none focus:border-blue-500 focus:bg-white focus:text-black transition-all" 
+            placeholder="Search keywords, subjects, or senders..." 
+            className="w-full bg-[#0f172a] border border-slate-700 text-white py-2 px-10 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm" 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
           />
-          <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
+          <Search className="absolute left-3 top-2.5 text-slate-500" size={18} />
         </div>
 
-        <div className="flex items-center gap-2 min-w-max">
-          <button onClick={copyAllEmails} className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-[10px] font-bold flex items-center gap-2 transition uppercase">
+        <div className="flex items-center gap-2">
+          <button onClick={copyAllEmails} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-[10px] font-bold flex items-center gap-2 transition border border-slate-700 uppercase">
             {copied ? <Check size={14} className="text-green-500"/> : <Copy size={14}/>}
-            {copied ? "Copied!" : "Copy All Inboxes"}
+            {copied ? "Copied!" : "Copy Seed List"}
           </button>
-          
-          <button onClick={refreshAllInboxes} className="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-[10px] font-bold flex items-center gap-2 transition uppercase">
+          <button onClick={refreshAllInboxes} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-[10px] font-bold flex items-center gap-2 transition uppercase shadow-lg shadow-blue-900/30">
             <RefreshCw size={14} className={Object.values(loading).some(v => v) ? "animate-spin" : ""} /> REFRESH ALL
           </button>
-          
-          <button onClick={() => setIsModalOpen(true)} className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-[10px] font-bold flex items-center gap-1 transition shadow-lg">
-            <Plus size={14}/> ADD
-          </button>
-          <div className="bg-gray-700 p-2 rounded-full border border-gray-600"><User size={16} /></div>
+          <button onClick={() => setIsModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-[10px] font-bold transition shadow-lg shadow-emerald-900/30 uppercase">+ Add Account</button>
         </div>
       </header>
 
-      {/* MAIN CONTENT */}
-      <main className="p-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {inboxes.map((box) => {
-            const list = emails[box.id] || [];
-            const filtered = list.filter(m => m.subject.toLowerCase().includes(searchTerm.toLowerCase()) || m.from.toLowerCase().includes(searchTerm.toLowerCase()));
-            return (
-              <div key={box.id} className="bg-[#101e2b] rounded-md overflow-hidden border border-gray-800 shadow-2xl transition-all">
-                <div className={`p-2.5 px-4 flex justify-between items-center ${box.provider === 'GMAIL' ? 'bg-green-600' : 'bg-blue-700'}`}>
-                  <span className="font-bold text-xs uppercase tracking-tighter flex items-center gap-2"><Mail size={14}/> {box.provider} - {box.user_name}</span>
-                  <button onClick={() => fastCopy(box.email)} className="text-[9px] font-mono opacity-80 hover:opacity-100 flex items-center gap-1">
-                    {box.email} <Copy size={10}/>
+      {/* --- MAIN CONTENT (ROW LAYOUT) --- */}
+      <main className="p-6 space-y-6 max-w-[1600px] mx-auto">
+        {inboxes.map((box) => {
+          const list = emails[box.id] || [];
+          const filtered = list.filter(m => m.subject.toLowerCase().includes(searchTerm.toLowerCase()) || m.from.toLowerCase().includes(searchTerm.toLowerCase()));
+          
+          return (
+            <div key={box.id} className="bg-[#1e293b] border border-slate-800 rounded-xl overflow-hidden shadow-2xl transition-all hover:border-slate-700 group">
+              
+              {/* Row Header (Account Info) */}
+              <div className="bg-slate-900/50 p-3 px-5 flex items-center justify-between border-b border-slate-800/50">
+                <div className="flex items-center gap-4">
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-slate-600 font-bold text-slate-300 shadow-inner group-hover:from-blue-600 group-hover:to-blue-800 group-hover:text-white transition-all">
+                    {box.user_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      {box.email}
+                      <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 uppercase">{box.user_name}</span>
+                    </h3>
+                    <div className="flex gap-2 mt-1">
+                      <span className="flex items-center gap-1 text-[9px] text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20"><ShieldCheck size={10}/> Connected</span>
+                      <span className="flex items-center gap-1 text-[9px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20"><Activity size={10}/> Inbox {filtered.length}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button onClick={() => loadRealEmails(box.id)} className="text-[10px] font-bold text-slate-400 hover:text-white bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 transition uppercase">
+                    {loading[box.id] ? "Fetching..." : "Fetch"}
+                  </button>
+                  <button onClick={() => { if(window.confirm("Delete?")) supabase.from('inboxes').delete().eq('id', box.id).then(() => fetchInboxes()); }} className="text-slate-500 hover:text-red-500 transition p-1">
+                    <Trash2 size={18}/>
                   </button>
                 </div>
-
-                <div className="p-4 space-y-2 bg-[#0d1621] h-[450px] overflow-y-auto custom-scrollbar">
-                  <div className="flex gap-2 mb-4">
-                    <button onClick={() => loadRealEmails(box.id)} className="flex-1 text-[10px] bg-blue-900/40 text-blue-400 py-2 rounded font-black border border-blue-700/30 uppercase tracking-widest transition">
-                      {loading[box.id] ? "FETCHING..." : "FETCH EMAILS"}
-                    </button>
-                    <button onClick={() => { if(window.confirm("Delete?")) supabase.from('inboxes').delete().eq('id', box.id).then(() => fetchInboxes()); }} className="bg-red-900/40 text-red-500 p-2 rounded border border-red-700/30 transition">
-                      <Trash2 size={16}/>
-                    </button>
-                  </div>
-
-                  {filtered.map((mail, i) => (
-                    <div key={i} className="p-3 border-b border-gray-800/50 bg-[#0f1a26]/40 mb-2 rounded hover:bg-[#1b3147]/30 transition group">
-                      <div className="flex justify-between items-start">
-                        <div className="flex flex-col truncate pr-2 max-w-[70%]">
-                          <span className="text-blue-400 font-bold text-[11px] truncate group-hover:text-blue-300">{mail.from}</span>
-                          <span className="text-gray-200 text-[10px] font-bold truncate uppercase">{mail.subject}</span>
-                        </div>
-                        <div className="text-right flex flex-col items-end gap-1">
-                          <span className="text-[9px] text-gray-600 font-mono font-bold tracking-tight">{new Date(mail.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                          <span className={`px-2 py-0.5 rounded-[2px] text-[8px] font-black border uppercase tracking-tighter ${mail.folder === 'SPAM' ? 'bg-red-900/30 text-red-500 border-red-800 animate-pulse' : 'bg-green-900/30 text-green-500 border-green-800'}`}>{mail.folder}</span>
-                        </div>
-                      </div>
-                      <div className="mt-2 flex gap-2">
-                        <button onClick={() => fastCopy(mail.ip)} title="Click to copy IP" className="bg-white/5 px-2 py-0.5 rounded border border-white/5 text-[9px] text-gray-500 font-mono flex items-center gap-1.5 hover:text-white transition active:scale-95">
-                          <Hash size={10} className="text-gray-700"/> {mail.ip}
-                        </button>
-                        <button onClick={() => fastCopy(mail.domain)} title="Click to copy Domain" className="bg-white/5 px-2 py-0.5 rounded border border-white/5 text-[9px] text-gray-500 flex items-center gap-1.5 truncate max-w-[140px] hover:text-white transition active:scale-95">
-                          <Globe size={10} className="text-gray-700"/> {mail.domain}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            );
-          })}
-        </div>
+
+              {/* Row Body (Horizontal Scrollable Emails) */}
+              <div className="p-4 flex gap-4 overflow-x-auto custom-scrollbar bg-[#0f172a]/20">
+                {filtered.length > 0 ? filtered.map((mail, i) => (
+                  <div key={i} className="min-w-[320px] max-w-[320px] bg-[#1e293b]/50 border border-slate-800 p-3 rounded-lg hover:border-blue-500/30 transition-colors relative shadow-sm">
+                    {/* Folder Badge */}
+                    <div className="flex justify-between items-center mb-2">
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter border ${
+                        mail.folder === 'SPAM' ? 'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse' : 
+                        mail.subject.toLowerCase().includes('declined') ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' :
+                        'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                      }`}>
+                        {mail.folder === 'SPAM' ? '● Spam' : mail.subject.toLowerCase().includes('declined') ? '● Forums' : '● Primary'}
+                      </span>
+                      <span className="text-[9px] text-slate-500 font-mono">{new Date(mail.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+
+                    <div className="flex flex-col mb-3">
+                      <span className="text-blue-400 font-bold text-[11px] truncate">{mail.from}</span>
+                      <span className="text-white text-[10px] font-bold truncate uppercase mt-0.5">{mail.subject}</span>
+                    </div>
+
+                    {/* Bottom Info (IP & Domain) */}
+                    <div className="flex gap-1.5 mt-auto pt-2 border-t border-slate-800">
+                      <button onClick={() => fastCopy(mail.ip)} className="flex-1 bg-slate-900/50 hover:bg-slate-800 p-1.5 rounded flex items-center justify-between px-2 text-slate-400 hover:text-white transition group/btn border border-slate-800">
+                        <div className="flex items-center gap-1.5 text-[9px] font-mono"><Hash size={10} className="text-slate-600"/> {mail.ip}</div>
+                        <Copy size={10} className="opacity-0 group-hover/btn:opacity-100 transition-opacity"/>
+                      </button>
+                      <button onClick={() => fastCopy(mail.domain)} className="flex-1 bg-slate-900/50 hover:bg-slate-800 p-1.5 rounded flex items-center justify-between px-2 text-slate-400 hover:text-white transition group/btn border border-slate-800 overflow-hidden">
+                        <div className="flex items-center gap-1.5 text-[9px] truncate"><Globe size={10} className="text-slate-600"/> {mail.domain}</div>
+                        <Copy size={10} className="opacity-0 group-hover/btn:opacity-100 transition-opacity"/>
+                      </button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="w-full flex items-center justify-center py-10 text-slate-600 text-xs italic tracking-widest bg-slate-900/20 rounded-lg">
+                    {loading[box.id] ? "Connecting to server..." : "No mails found. Click Fetch to synchronize."}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </main>
 
-      {/* --- MODAL (هادي هي اللي رجعات) --- */}
+      {/* --- ADD MODAL --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-[100] backdrop-blur-md">
-          <div className="bg-[#243b55] w-full max-w-md p-8 rounded-lg border border-gray-600 shadow-2xl relative font-bold uppercase text-[10px] tracking-widest text-white">
-            <button onClick={() => setIsModalOpen(false)} className="absolute right-4 top-4 text-gray-500 hover:text-white transition"><X size={20}/></button>
-            <h2 className="text-xl font-black mb-8 text-center text-blue-400 italic">Add New Account</h2>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="text-gray-500 mb-1.5 block tracking-widest font-black uppercase">Email Provider</label>
-                <select className="w-full p-3 bg-[#1a2c3d] rounded border border-gray-700 outline-none focus:border-blue-500 text-white" value={formData.provider} onChange={(e) => setFormData({...formData, provider: e.target.value})}>
-                  <option value="GMAIL">GMAIL (Google)</option>
-                  <option value="OUTLOOK">OUTLOOK / HOTMAIL</option>
+        <div className="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
+          <div className="bg-[#1e293b] w-full max-w-md p-8 rounded-2xl border border-slate-700 shadow-2xl relative">
+            <button onClick={() => setIsModalOpen(false)} className="absolute right-4 top-4 text-slate-500 hover:text-white transition p-2"><X size={20}/></button>
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-black text-white italic uppercase tracking-widest">Add New Inbox</h2>
+              <p className="text-xs text-slate-500 mt-1">Setup IMAP connection for your seed list</p>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Provider</label>
+                <select className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-bold" value={formData.provider} onChange={(e) => setFormData({...formData, provider: e.target.value})}>
+                  <option value="GMAIL">GMAIL (Google Account)</option>
+                  <option value="OUTLOOK">OUTLOOK / MSN / HOTMAIL</option>
                 </select>
               </div>
-              <div>
-                <label className="text-gray-500 mb-1.5 block tracking-widest font-black uppercase">User Name</label>
-                <input type="text" placeholder="e.g. Account 01" className="w-full p-3 bg-[#1a2c3d] rounded border border-gray-700 outline-none focus:border-blue-500 text-white" value={formData.user_name} onChange={(e) => setFormData({...formData, user_name: e.target.value})} required />
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Account Label</label>
+                <input type="text" placeholder="e.g. David Seed 01" className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-bold placeholder:text-slate-700" value={formData.user_name} onChange={(e) => setFormData({...formData, user_name: e.target.value})} required />
               </div>
-              <div>
-                <label className="text-gray-500 mb-1.5 block tracking-widest font-black uppercase">Email Address</label>
-                <input type="email" placeholder="example@gmail.com" className="w-full p-3 bg-[#1a2c3d] rounded border border-gray-700 outline-none focus:border-blue-500 text-white" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required />
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Email Address</label>
+                <input type="email" placeholder="example@gmail.com" className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-bold placeholder:text-slate-700" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required />
               </div>
-              <div>
-                <label className="text-gray-500 mb-1.5 block tracking-widest font-black uppercase">App Password</label>
-                <input type="password" placeholder="xxxx xxxx xxxx xxxx" className="w-full p-3 bg-[#1a2c3d] rounded border border-gray-700 outline-none focus:border-blue-500 text-white" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required />
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">App Password</label>
+                <input type="password" placeholder="xxxx xxxx xxxx xxxx" className="w-full p-3 bg-[#0d1421] border border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-bold placeholder:text-slate-700" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required />
               </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded font-black shadow-lg transition active:scale-95 tracking-[0.2em] uppercase">SAVE ACCOUNT</button>
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition shadow-lg shadow-blue-900/40 active:scale-95 mt-4">Save Connection</button>
             </form>
           </div>
         </div>
