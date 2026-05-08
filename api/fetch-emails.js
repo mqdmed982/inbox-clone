@@ -20,20 +20,50 @@ export default async function handler(req, res) {
 
   try {
     await client.connect();
-    let mailbox = await client.mailboxOpen('INBOX');
-    let lastIndex = mailbox.exists;
-    let firstIndex = Math.max(1, lastIndex - 9); 
-    
-    let messages = [];
-    for await (let message of client.fetch(`${firstIndex}:${lastIndex}`, { envelope: true })) {
-      messages.push({
-        from: message.envelope.from[0].name || message.envelope.from[0].address,
-        subject: message.envelope.subject,
-        date: message.envelope.date
-      });
+    let allMessages = [];
+
+    // --- 1. جلب الإيمايلات من الـ INBOX ---
+    let inboxBox = await client.mailboxOpen('INBOX');
+    if (inboxBox.exists > 0) {
+      let lastIndex = inboxBox.exists;
+      let firstIndex = Math.max(1, lastIndex - 9);
+      for await (let msg of client.fetch(`${firstIndex}:${lastIndex}`, { envelope: true })) {
+        allMessages.push({
+          from: msg.envelope.from[0].name || msg.envelope.from[0].address,
+          subject: msg.envelope.subject,
+          date: msg.envelope.date,
+          folder: 'INBOX' // وسم Inbox
+        });
+      }
     }
+
+    // --- 2. جلب الإيمايلات من الـ SPAM ---
+    // Gmail كيتسمى '[Gmail]/Spam'، Outlook كيتسمى 'Junk'
+    const spamFolderName = inbox.provider.toUpperCase() === 'GMAIL' ? '[Gmail]/Spam' : 'Junk';
+    
+    try {
+      let spamBox = await client.mailboxOpen(spamFolderName);
+      if (spamBox.exists > 0) {
+        let lastSpam = spamBox.exists;
+        let firstSpam = Math.max(1, lastSpam - 9);
+        for await (let msg of client.fetch(`${firstSpam}:${lastSpam}`, { envelope: true })) {
+          allMessages.push({
+            from: msg.envelope.from[0].name || msg.envelope.from[0].address,
+            subject: msg.envelope.subject,
+            date: msg.envelope.date,
+            folder: 'SPAM' // وسم Spam
+          });
+        }
+      }
+    } catch (e) { console.log("No spam folder found or accessible"); }
+
     await client.logout();
-    return res.status(200).json(messages.reverse());
+
+    // ترتيب كلشي على حسب التاريخ (الأحدث هو الأول)
+    allMessages.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return res.status(200).json(allMessages.slice(0, 15)); // كيرجع أحسن 15 إيمايل مخلطين
+    
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
