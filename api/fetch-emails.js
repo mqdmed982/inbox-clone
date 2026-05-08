@@ -21,14 +21,13 @@ export default async function handler(req, res) {
     await client.connect();
     let allMessages = [];
 
-    // دالة لاستخراج الـ IP من الـ Headers
+    // دالة لاستخراج الـ IP
     const extractIP = (headers) => {
       const received = headers.get('received');
       if (!received) return '0.0.0.0';
       const ipRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/;
-      // كنقلبو على أول IP كيبان في الـ Received headers (غالباً هو السيرفر الأصلي)
       const match = received.match(ipRegex);
-      return match ? match[0] : 'Hidden IP';
+      return match ? match[0] : 'Hidden';
     };
 
     // جلب من الـ Inbox
@@ -36,47 +35,21 @@ export default async function handler(req, res) {
     if (inboxBox.exists > 0) {
       let lastIndex = inboxBox.exists;
       let firstIndex = Math.max(1, lastIndex - 9);
-      // كنزيدو 'bodyStructure' و 'headers' باش نجبدو الـ IP
       for await (let msg of client.fetch(`${firstIndex}:${lastIndex}`, { envelope: true, headers: true })) {
-        const fromEmail = msg.envelope.from[0].address;
         allMessages.push({
-          from: msg.envelope.from[0].name || fromEmail,
-          email: fromEmail,
-          subject: msg.envelope.subject,
+          from: msg.envelope.from[0].name || msg.envelope.from[0].address,
+          subject: msg.envelope.subject || 'No Subject',
           date: msg.envelope.date,
           folder: 'INBOX',
           ip: extractIP(msg.headers),
-          domain: fromEmail.split('@')[1] // جبد الدومين من الإيمايل
+          domain: msg.envelope.from[0].address.split('@')[1]
         });
       }
     }
 
-    // جلب من الـ Spam
-    const spamFolder = inbox.provider.toUpperCase() === 'GMAIL' ? '[Gmail]/Spam' : 'Junk';
-    try {
-      await client.mailboxOpen(spamFolder);
-      let spamBox = await client.mailboxOpen(spamFolder);
-      if (spamBox.exists > 0) {
-        let lastSpam = spamBox.exists;
-        let firstSpam = Math.max(1, lastSpam - 9);
-        for await (let msg of client.fetch(`${firstSpam}:${lastSpam}`, { envelope: true, headers: true })) {
-          const fromEmail = msg.envelope.from[0].address;
-          allMessages.push({
-            from: msg.envelope.from[0].name || fromEmail,
-            email: fromEmail,
-            subject: msg.envelope.subject,
-            date: msg.envelope.date,
-            folder: 'SPAM',
-            ip: extractIP(msg.headers),
-            domain: fromEmail.split('@')[1]
-          });
-        }
-      }
-    } catch (e) {}
-
     await client.logout();
     allMessages.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return res.status(200).json(allMessages.slice(0, 15));
+    return res.status(200).json(allMessages);
     
   } catch (err) {
     return res.status(500).json({ error: err.message });
