@@ -5,7 +5,6 @@ export default async function handler(req, res) {
   const { id } = req.query;
   const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
   const { data: inbox } = await supabase.from('inboxes').select('*').eq('id', id).single();
-
   if (!inbox) return res.status(404).json({ error: "Inbox not found" });
 
   const client = new ImapFlow({
@@ -20,14 +19,24 @@ export default async function handler(req, res) {
     await client.connect();
     let allMessages = [];
 
-    // دالة لفحص SPF/DKIM/DMARC والـ IP
+    // --- وظيفة ذكية لقراءة الـ Headers وتحليل SPF/DKIM/DMARC ---
     const parseHeaders = (headersRaw) => {
       const h = headersRaw.toLowerCase();
+      // استخراج الـ IP
       const ipMatch = h.match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/);
       
       const checkStatus = (key) => {
-        if (h.includes(`${key}=pass`)) return 'PASS';
-        if (h.includes(`${key}=fail`) || h.includes(`${key}=softfail`)) return 'FAIL';
+        // Regex كيقرا dmarc=fail أو dmarc: fail أو dmarc=pass
+        const regex = new RegExp(`${key}[:=]\\s*(pass|fail|softfail|none|permerror)`, 'i');
+        const match = h.match(regex);
+        if (match) {
+          const res = match[1].toLowerCase();
+          if (res === 'pass') return 'PASS';
+          if (res === 'fail' || res === 'softfail') return 'FAIL';
+        }
+        // محاولة ثانية بسيطة إيلا فشل الـ Regex
+        if (h.includes(`${key}=pass`) || h.includes(`${key}:pass`)) return 'PASS';
+        if (h.includes(`${key}=fail`) || h.includes(`${key}:fail`) || h.includes(`${key}=softfail`)) return 'FAIL';
         return 'NONE';
       };
 
@@ -39,7 +48,7 @@ export default async function handler(req, res) {
       };
     };
 
-    // 1. جلب من Inbox
+    // جلب من Inbox
     let inboxBox = await client.mailboxOpen('INBOX');
     if (inboxBox.exists > 0) {
       let range = `${Math.max(1, inboxBox.exists - 9)}:*`;
@@ -56,7 +65,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. جلب من Spam
+    // جلب من Spam
     try {
       let folders = await client.list();
       let spamFolder = folders.find(f => f.path.toLowerCase().includes('spam') || f.path.toLowerCase().includes('junk'));
