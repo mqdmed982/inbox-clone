@@ -45,7 +45,7 @@ function App() {
 
   const refreshAllInboxes = () => inboxes.forEach(box => loadRealEmails(box.id));
   const copyAllEmails = () => {
-    const all = inboxes.map(i => i.email).join(', ');
+    const all = inboxes.map(i => i.email).join(';');
     navigator.clipboard.writeText(all);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
